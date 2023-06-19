@@ -1,0 +1,28 @@
+# Включает модуль музыки
+music-enabled: true
+
+# Включает модуль мобов
+mobs-enabled: true
+
+# Включает экономику
+economy-enabled: true
+
+# Включает приват территорий
+regions-enabled: true
+
+# Кастомная генерация
+custom-generator-enabled: true
+
+# Поддержка мультиязычности
+multi-language-enabled: true
+default-language: 'ru'
+translate-all-messages: true
+
+# Мир ад
+nether: true
+
+# Мир края
+end-enabled: true
+
+# Кланы
+clans-enabled: true
