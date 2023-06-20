@@ -9,36 +9,32 @@ class gamemode extends \Richen\NubixCmds {
     public function __construct($name) { parent::__construct($name, 'Изменить режим игры', ['gm']); }
     public function execute(\pocketmine\Command\CommandSender $sender, $label, array $args) {
         if (!$this->checkPermission($sender)) return;
-        if ($sender instanceof NBXPlayer) {
-            $player = $sender;
-            if (!isset($args[0])) {
-                if (!$this->isConsole($sender)) $sender->sendMessage($this->getUsageMessage('[режим]'));
-                if ($this->checkPermission($sender, 'other')) {
-                    $sender->sendMessage($this->getUsageMessage('[режим] [игрок] - выдача другому игроку'));
-                }
-                return;
+        $player = $sender;
+        if (!isset($args[0])) {
+            if (!$this->isConsole($sender)) $sender->sendMessage($this->getUsageMessage('[режим]'));
+            if ($this->checkPermission($sender, 'other')) {
+                $sender->sendMessage($this->getUsageMessage('[режим] [игрок] - выдача другому игроку'));
             }
-            $gamemode = $args[0];
-            if (isset($args[1]) && ($this->hasPermission($sender, '.other') || $this->isConsole($sender))) {
-                $name = $args[1];
-                $player = $this->getPlayerByName($name);
-                if (!$player) {
-                    $sender->sendMessage($this->getOfflineMessage($name));
-                } else {
-                    if (!$this->toggleGamemode($player, $gamemode)) {
-                        $sender->sendMessage($this->lang()->prepare('not-found-gamemode', $this->lang()::SUC, [$player->getName()]));
-                    } elseif ($sender !== $player) {
-                        $sender->sendMessage('§2[!] §7Режим игрока §6' . $gamemode . ' §7изменен на ' . $this->parseGameMode($player->getGamemode())[1]);
-                    }
-                }
+            return;
+        }
+        $gamemode = $args[0];
+        if (isset($args[1]) && ($this->hasPermission($sender, '.other') || $this->isConsole($sender))) {
+            $name = $args[1];
+            $player = $this->getPlayerByName($name);
+            if (!$player) {
+                $sender->sendMessage($this->getOfflineMessage($name));
             } else {
-                if ($this->isConsole($sender)) return $sender->sendMessage($this->getConsoleUsage());
                 if (!$this->toggleGamemode($player, $gamemode)) {
                     $sender->sendMessage($this->lang()->prepare('not-found-gamemode', $this->lang()::SUC, [$player->getName()]));
+                } elseif ($sender !== $player) {
+                    $sender->sendMessage('§2[!] §7Режим игрока §6' . $gamemode . ' §7изменен на ' . $this->parseGameMode($player->getGamemode())[1]);
                 }
             }
         } else {
-            $sender->sendMessage($this->getConsoleUsage());
+            if ($this->isConsole($sender)) return $sender->sendMessage($this->getConsoleUsage());
+            if (!$this->toggleGamemode($player, $gamemode)) {
+                $sender->sendMessage($this->lang()->prepare('not-found-gamemode', $this->lang()::SUC, [$player->getName()]));
+            }
         }
     }
 

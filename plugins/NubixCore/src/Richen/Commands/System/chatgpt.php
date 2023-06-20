@@ -7,23 +7,15 @@ use Richen\Engine\Filter;
 class chatgpt extends \Richen\NubixCmds {
     public function __construct($name) { parent::__construct($name, 'ChatGPT', ['cg']); }
 
-    public array $timer = [];
-    public int $countdown = 60;
-
     public function execute(\pocketmine\Command\CommandSender $sender, $label, array $args) {
         if (!$this->checkPermission($sender)) return;
         if (count($args) < 3) return $sender->sendMessage($this->getUsageMessage('[подробный вопрос к нейросети] §e- не меньше 3 слов.'));
         $message = implode(' ', $args);
         if (!Filter::isAllowed($message)) return $sender->sendMessage($this->lang()::ERR . ' §cНельзя использовать нецензурные выражения!');
-        $time = $this->timer[$sender->getName()] ?? 0;
-        if (time() > $time) {
-            $this->serv()->broadcastMessage('§6[§eChat§fGPT§6] §fВопрос к нейросети от игрока §e' . $sender->getName() . '§f: §7' . $message);
-            $result = $this->getChatGptResponse($message . '. В ответе используй максимум 100 символов и русский язык');
-            $this->serv()->broadcastMessage('§6[§eChat§fGPT§6] §fОтвет: §7' . str_replace(PHP_EOL, '', $result));
-            $this->timer[$sender->getName()] = time() + $this->countdown;
-        } else {
-            $sender->sendMessage('§6[§eChat§fGPT§6] §cНельзя использовать нейросеть так часто! Подождите: ' . ($time - time()) . ' сек.');
-        }
+        if (($cd = $this->countdown($sender, 60)) > 0) return $sender->sendMessage($this->lang()::ERR . ' §cНе так часто! Подождите ещё ' . $cd . ' сек.');
+        $this->serv()->broadcastMessage('§6[§eChat§fGPT§6] §fВопрос к нейросети от игрока §e' . $sender->getName() . '§f: §7' . $message);
+        $result = $this->getChatGptResponse($message . '. В ответе используй максимум 100 символов и русский язык');
+        $this->serv()->broadcastMessage('§6[§eChat§fGPT§6] §fОтвет: §7' . str_replace(PHP_EOL, '', $result));
     }
 
     public function getChatGptResponse($message) {

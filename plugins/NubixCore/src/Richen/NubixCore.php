@@ -18,6 +18,7 @@ class NubixCore extends \pocketmine\plugin\PluginBase {
     public static \Richen\Engine\Additions\Stats $stat;
     public static \Richen\Engine\Additions\Help $help;
     public static \Richen\Engine\Additions\Cases $case;
+    public static \Richen\Engine\Additions\VK $vcom;
     public function onEnable() {
         self::$path = $this->getDataFolder();
         if (!is_dir(self::$path)) @mkdir(self::$path, 0777, true);
@@ -35,6 +36,7 @@ class NubixCore extends \pocketmine\plugin\PluginBase {
         self::$stat = new \Richen\Engine\Additions\Stats();
         self::$help = new \Richen\Engine\Additions\Help();
         self::$case = new \Richen\Engine\Additions\Cases();
+        self::$vcom = new \Richen\Engine\Additions\VK('vk1.a.OL3Q4ExaTY4k3fKp2PvS5CkOELRACorUZhl0HF3VOyVlNCm3ZFjImfUdJJdvnz7jAYKQ9ZVVOOlpxMh8mmSd_vVZ8N09cPyjo0K7Isqnpmdq8-NCcs3UouUXqbSx5eqyIEWYupAwW3WwPhfauhJWnNeEXUxE1F85xBYwZZj2ZPxWuW-4m5rNnkkKNwNUaqC14tnVlP615PTPiN8K3UKQnw');
         $this->launch();
     }
 
@@ -107,4 +109,5 @@ class NubixCore extends \pocketmine\plugin\PluginBase {
     public static function stat(): \Richen\Engine\Additions\Stats { return self::$stat; }
     public static function help(): \Richen\Engine\Additions\Help { return self::$help; }
     public static function case(): \Richen\Engine\Additions\Cases { return self::$case; }
+    public static function vcom(): \Richen\Engine\Additions\VK { return self::$vcom; }
 }

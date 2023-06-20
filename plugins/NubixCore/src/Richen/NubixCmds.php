@@ -42,4 +42,21 @@ abstract class NubixCmds extends \pocketmine\command\Command {
         }
         return $hasPermission;
     }
+    protected array $countdown = [];
+    public function countdown(CommandSender $sender, int $countdown): int {
+        $command = $this->getCommandName();
+        $name = $sender->getName();
+
+        if (isset($this->countdown[$name][$command])) {
+            $time = $this->countdown[$name][$command];
+            if (time() > $time) {
+                $this->countdown[$name][$command] = time() + $countdown;
+            } else {
+                return $time - time();
+            }
+        } else {
+            $this->countdown[$name][$command] = time() + $countdown;
+        }
+        return 0;
+    }
 }
