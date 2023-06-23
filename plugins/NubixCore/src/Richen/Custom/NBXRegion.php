@@ -70,7 +70,7 @@ class NBXRegion implements IRegion {
     }
 
     public function isMember(string $username) {
-        return in_array($username, $this->members) || $username === $this->owner;
+        return in_array(mb_strtolower($username), $this->members) || mb_strtolower($username) === $this->owner;
     }
 
     public function hasChanged(): bool {

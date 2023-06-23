@@ -51,18 +51,6 @@ class NubixCore extends \pocketmine\plugin\PluginBase {
         \Richen\Engine\Tasks\TaskManager::startTasks();
     }
 
-    public function initCommands2(): void {
-        foreach (($cm = $this->getServer()->getCommandMap())->getCommands() as $command) $cm->unregister($command);
-        $commands = [];
-        foreach (scandir(__DIR__ . '/Commands/') as $file) {
-            if ($file === '.' || $file === '..') continue;
-            $commandName = basename($file, '.php');
-            $commandPath = "\\Richen\\Commands\\$commandName";
-            $commands[] = new $commandPath($commandName);
-        }
-        $cm->registerAll('nbx', $commands);
-	}
-
     public function initCommands(): void {
         $commandMap = $this->getServer()->getCommandMap();
         foreach ($commandMap->getCommands() as $command) $commandMap->unregister($command);

@@ -80,7 +80,6 @@ class Cases extends \Richen\Engine\Manager {
         if ($this->getCases($user_id) < $count) return false;
         foreach ($this->getCases($user_id) as $case) {
             if ($count === 0) break;
-            print_r($case);
             try {
                 $this->data()->update('cases', ['status' => 0, 'result' => $user2_id], [['k' => 'id', 'v' => $case['id']]]);
             } catch (\Exception $e) {

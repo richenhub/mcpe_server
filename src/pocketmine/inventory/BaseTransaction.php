@@ -229,23 +229,22 @@ class BaseTransaction implements Transaction {
 	 * Handles transaction execution. Returns whether transaction was successful or not.
 	 */
 
-	public function execute(Player $source) : bool{
-		if($this->getInventory()->processSlotChange($this)){
-			$ignore = false;
-          if($source->isRename()) {
-           $ignore = true;
-             }
-			if($source->getServer()->allowInventoryCheats || $source->isCreative()){
-            $ignore = true;
-           }
-               if(!$ignore) {
+	public function execute(Player $source): bool {
+		if ($this->getInventory()->processSlotChange($this)) {
+         	$ignore = false;
+          	if ($source->isRename()) {
+           		$ignore = true;
+			}
+			if ($source->getServer()->allowInventoryCheats || $source->isCreative()) {
+            	$ignore = true;
+			}
+			if (!$ignore) {
 				$change = $this->getChange();
 
-				if($change === null){ //No changes to make, ignore this transaction
+				if ($change === null) {
 					return true;
 				}
 
-				/* Verify that we have the required items */
 				if($change["out"] instanceof Item){
 					if(!$this->getInventory()->slotContains($this->getSlot(), $change["out"])){
 						return false;
@@ -257,8 +256,6 @@ class BaseTransaction implements Transaction {
 					}
 				}
 
-				/* All checks passed, make changes to floating inventory
-				 * This will not be reached unless all requirements are met */
 				if($change["out"] instanceof Item){
 					$source->getFloatingInventory()->addItem($change["out"]);
 				}
@@ -267,11 +264,6 @@ class BaseTransaction implements Transaction {
 				}
 			}
 			$this->getInventory()->setItem($this->getSlot(), $this->getTargetItem(), false);
-		}
-
-		/* Process transaction achievements, like getting iron from a furnace */
-		foreach($this->achievements as $achievement){
-			$source->awardAchievement($achievement);
 		}
 
 		return true;

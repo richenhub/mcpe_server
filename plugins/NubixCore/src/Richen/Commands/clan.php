@@ -56,7 +56,6 @@ class clan extends \Richen\NubixCmds {
                 } else {
                     $cmd = $this->deleteCommand[$sender->getName()];
                     unset($this->deleteCommand[$sender->getName()]);
-                    echo $cmd . $clanname;
                     if ($cmd !== $clanname) return $sender->sendMessage('§4[!] §cНе удалось подтвердить удаление клана. Попробуйте ещё раз');
                     $this->serv()->broadcastMessage('§6[!] §eКлан ' . $clan->getNameTag() . ' §eбыл распущен');
                     $cm->deleteClan($clan->getId());

@@ -44,7 +44,7 @@ class AutoMessageTask extends TaskManager {
             }
             BossBar::getInstance()->setTitle($this->messages[$this->index1], 0);
             BossBar::getInstance()->setPercentage((int)((100 / count($this->messages)) * $this->index1+1), 0);
-            echo (int)((100 / count($this->messages)) * $this->index1+1);
+            //echo (int)((100 / count($this->messages)) * $this->index1+1);
         }
 
         $this->index1++;

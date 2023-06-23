@@ -18,7 +18,7 @@ class gamemode extends \Richen\NubixCmds {
             return;
         }
         $gamemode = $args[0];
-        if (isset($args[1]) && ($this->hasPermission($sender, '.other') || $this->isConsole($sender))) {
+        if (isset($args[1]) && (($this->hasPermission($sender, '.other') || $this->isConsole($sender)))) {
             $name = $args[1];
             $player = $this->getPlayerByName($name);
             if (!$player) {
@@ -27,7 +27,7 @@ class gamemode extends \Richen\NubixCmds {
                 if (!$this->toggleGamemode($player, $gamemode)) {
                     $sender->sendMessage($this->lang()->prepare('not-found-gamemode', $this->lang()::SUC, [$player->getName()]));
                 } elseif ($sender !== $player) {
-                    $sender->sendMessage('§2[!] §7Режим игрока §6' . $gamemode . ' §7изменен на ' . $this->parseGameMode($player->getGamemode())[1]);
+                    $sender->sendMessage('§2[!] §7Режим игрока §6' . $player->getName() . ' §7изменен на ' . $this->parseGameMode($player->getGamemode())[1]);
                 }
             }
         } else {

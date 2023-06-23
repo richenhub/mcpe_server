@@ -12,7 +12,7 @@ class ask extends \Richen\NubixCmds {
         if (count($args) < 3) return $sender->sendMessage($this->getUsageMessage('[вопрос или жалоба] §e- не меньше 3 слов.'));
         $message = implode(' ', $args);
         if (!Filter::isAllowed($message)) return $sender->sendMessage($this->lang()::ERR . ' §cНельзя использовать нецензурные выражения!');
-        if (($cd = $this->countdown($sender, 60)) > 0) return $sender->sendMessage($this->lang()::ERR . ' §cНе так часто! Подождите ещё ' . $cd . ' сек.');
+        if (!$this->countdown($sender, 60)) return;
         $vk_message = '[ASK] Вопрос от игрока ' . $sender->getName() . ': ' . $message;
         if ($this->core()->vcom()->sendMessage($vk_message, true, true)) {
             $sender->sendMessage('§6[§eАSK§6] §fВы отправили сообщение §e' . $sender->getName() . '§f: §7' . $message);

@@ -21,6 +21,7 @@ class warp extends \Richen\NubixCmds {
     public function execute(\pocketmine\Command\CommandSender $sender, $label, array $args) {
         if (!$this->checkPermission($sender)) return;
         if (!$sender instanceof NBXPlayer) return $this->getConsoleUsage();
+        if ($sender->teleportManager()->isTeleport()) return;
         if (count($args) === 2 && $this->hasPermission($sender, 'set')) {
             if ($args[0] === 'set') {
                 if (($item = $sender->getInventory()->getItemInHand())->getId() === 0) {
@@ -47,6 +48,18 @@ class warp extends \Richen\NubixCmds {
                 }
                 return;
             }
+            elseif ($args[0] === 'del') {
+                if(isset($args[1])) {$serverData = $this->core()->getServerData();
+                    $warps = $serverData['warps'] ?? [];
+                    if (isset($warps[$args[1]])) {
+                        unset($warps[$args[1]]);
+                        $serverData['warps'] = $warps;
+                        $this->core()->setServerData($serverData);
+                        $sender->sendMessage('Точка варп ' . $args[1] . ' удалена');
+                        return;
+                    }
+                }
+            }
         }
         $serverData = $this->core()->getServerData();
         if ((!isset($serverData['warps']) || !count($serverData['warps']))) return $sender->sendMessage('§4[!] §cНа сервере нет установленных варпов');
@@ -59,13 +72,13 @@ class warp extends \Richen\NubixCmds {
         $this->openInventory($sender, $items);
     }
 
-    protected array $tiles;
+    //protected array $tiles;
     public function openInventory(NBXPlayer $player, array $slots = [], bool $center = true) {
-        $empty = []; for ($i = 0; $i < 27; $i++) $empty[] = (Item::get(102, 0, 1))->setCustomName('§0Empty');
-
-        $centerIndex = floor(count($empty) / 2);
-        $leftPart = array_slice($empty, 0, $centerIndex);
-        $rightPart = array_slice($empty, $centerIndex);
+        $empty = []; for ($i = 0; $i < 27; $i++) $empty[] = (Item::get(102, 0, 1))->setCustomName('§0');
+        
+        $startIndex = floor((27 / 2) - (count($slots) / 2));
+        $leftPart = array_slice($empty, 0, $startIndex);
+        $rightPart = array_slice($empty, $startIndex);
         $resultArray = array_merge($leftPart, $slots, $rightPart);
 
         $tag = new CompoundTag('', [
@@ -87,7 +100,9 @@ class warp extends \Richen\NubixCmds {
             }
             $player->getLevel()->addSound(new BlazeShootSound($player));
             $player->addWindow($tile->getInventory());
-            $this->tiles[$player->getName()] = $tile;
+           //$this->tiles[$player->getName()] = $tile;
         }
+        $player->setWarp(true);
+        $player->addTile($tile);
     }
 }

@@ -5,6 +5,43 @@ namespace Richen\Custom;
 use Richen\Engine\Utils;
 use Richen\NubixCash;
 
+class PlayerStats {
+    private int $user_id;
+    private int $kills, $online, $death, $place, $break, $messages;
+    private bool $exists = false;
+    public function __construct(int $user_id) {
+        $res = \Richen\NubixCore::data()->get('stats', [['k' => 'user_id', 'v' => $user_id]]);
+        $this->exists = count($res);
+        if ($this->exists) $res = $res[0];
+        $this->kills = $res['kills'] ?? 0;
+        $this->online = $res['online'] ?? 0;
+        $this->death = $res['death'] ?? 0;
+        $this->place = $res['place'] ?? 0;
+        $this->messages = $res['messages'] ?? 0;
+        $this->user_id = $user_id;
+    }
+
+    public function getKills(): int { return $this->kills; }
+    public function getDeath(): int { return $this->death; }
+    public function getPlace(): int { return $this->place; }
+    public function getBreak(): int { return $this->break; }
+    public function getOnline(int $add = 0): int { return $this->online + $add; }
+    public function getMessages(): int { return $this->messages; }
+    public function addProp(string $prop, int $val): int {
+        if (!$this->exists) {
+            $res = \Richen\NubixCore::data()->add('stats', ['user_id' => $this->user_id]);
+            print_r(\Richen\NubixCore::data()->lastError());
+            if ($res > 0) $this->exists = true;
+        }
+        if ($this->exists && isset($this->$prop)) {
+            $this->$prop = $this->$prop += $val;
+            \Richen\NubixCore::data()->update('stats', [$prop => $this->$prop], [['k' => 'user_id', 'v' => $this->user_id]]);
+        }
+        print_r(\Richen\NubixCore::data()->lastError());
+        return $this->$prop;
+    }
+}
+
 class HomeManager {
     private array $homes;
     private NBXPlayer $player;
@@ -61,32 +98,39 @@ class Teleport {
 }
 
 class TeleportManager extends \Richen\Engine\Manager {
-    private array $isTeleport;
-    private array $requests;
+    private bool $isTeleport = false;
+    private array $requests = [];
     private NBXPlayer $player;
     public function __construct(NBXPlayer $player) { $this->player = $player; }
     public function teleport(\pocketmine\level\Position $position, $loadMsg = '', $tpMsg = '') {
-        if (isset($this->isTeleport[$this->player->getName()])) return $this->player->sendMessage('§4[!] §cВоу воу, подождите пока закончится другая телепортация');
-        $this->isTeleport[$this->player->getName()] = true;
+        if ($this->isTeleport()) return $this->player->sendMessage('§4[!] §cВоу воу, подождите пока закончится другая телепортация');
+        $this->isTeleport = true;
         $this->serv()->getScheduler()->scheduleRepeatingTask(new \Richen\Engine\Tasks\TeleportTask($this, $this->player, $position, $loadMsg, $tpMsg), 4);
     }
-    public function isTeleport() { return isset($this->isTeleport[$this->player->getName()]); }
-    public function unsetTeleport() { unset($this->isTeleport[$this->player->getName()]); }
-    public function getRequests() { return $this->hasRequests() ? $this->requests[$this->player->getName()] : []; }
+    public function isTeleport() { return $this->isTeleport; }
+    public function unsetTeleport() { $this->isTeleport = false; }
+    public function getRequests() { return $this->hasRequests() ? $this->requests : []; }
     public function hasRequests() {
-        foreach ($this->requests[$this->player->getName()] as $playerName => $time) if ($time < time()) unset($this->requests[$this->player->getName()][$playerName]);
-        return isset($this->requests[$this->player->getName()]) && !empty($this->requests[$this->player->getName()]);
+        if (empty($this->requests)) return false;
+        foreach ($this->requests as $playerName => $time) {
+            if ($time < time()) {
+                unset($this->requests[$playerName]);
+            }
+        }
+        return !empty($this->requests);
     }
-    public function setRequests(NBXPlayer $player) { $this->requests[$this->player->getName()][$player->getName()] = time() + 60; }
-    public function unsetRequests() { unset($this->requests[$this->player->getName()]); }
+    public function setRequests(NBXPlayer $player) { $this->requests[$player->getName()] = time() + 60; }
+    public function unsetRequests() { $this->requests = []; }
 }
 
 class NBXPlayer extends \pocketmine\Player {
+    use \Richen\Engine\Traits\Helper;
 	public function getLowerCaseName(): string { return mb_strtolower($this->iusername); }
     
     public function getHomeManager(): HomeManager { return new HomeManager($this); }
     public function getLastPosManager(): LastPosManager { return new LastPosManager($this); }
-    public function teleportManager(): TeleportManager { return new TeleportManager($this); }
+    public ?TeleportManager $teleportManager = null;
+    public function teleportManager(): TeleportManager { return $this->teleportManager = $this->teleportManager instanceof TeleportManager ? $this->teleportManager : new TeleportManager($this); }
 
     public function getMaxRegions(): int { return $this->core()->conf('groups')->config()->getAll()[$this->getGroupName()]['maxRegions']; }
     public function getMaxBlocks(): int { return $this->core()->conf('groups')->config()->getAll()[$this->getGroupName()]['maxBlocks']; }
@@ -295,41 +339,17 @@ class NBXPlayer extends \pocketmine\Player {
     public function inFight(): bool { return $this->fight > 0; }
     public function getFight(): int { return $this->fight; }
     public function setFight(int $val) { $this->fight = $val; }
-}
-
-class PlayerStats {
-    private int $user_id;
-    private int $kills, $online, $death, $place, $break, $messages;
-    private bool $exists = false;
-    public function __construct(int $user_id) {
-        $res = \Richen\NubixCore::data()->get('stats', [['k' => 'user_id', 'v' => $user_id]]);
-        $this->exists = count($res);
-        if ($this->exists) $res = $res[0];
-        $this->kills = $res['kills'] ?? 0;
-        $this->online = $res['online'] ?? 0;
-        $this->death = $res['death'] ?? 0;
-        $this->place = $res['place'] ?? 0;
-        $this->messages = $res['messages'] ?? 0;
-        $this->user_id = $user_id;
-    }
-
-    public function getKills(): int { return $this->kills; }
-    public function getDeath(): int { return $this->death; }
-    public function getPlace(): int { return $this->place; }
-    public function getBreak(): int { return $this->break; }
-    public function getOnline(int $add = 0): int { return $this->online + $add; }
-    public function getMessages(): int { return $this->messages; }
-    public function addProp(string $prop, int $val): int {
-        if (!$this->exists) {
-            $res = \Richen\NubixCore::data()->add('stats', ['user_id' => $this->user_id]);
-            print_r(\Richen\NubixCore::data()->lastError());
-            if ($res > 0) $this->exists = true;
+    public array $tiles = [];
+    public function addTile(\pocketmine\tile\Tile $tile) { $this->tiles[] = $tile; }
+    public function closeTile() {
+        foreach ($this->tiles as $tile) {
+            if ($tile instanceof \pocketmine\tile\Tile && $tile instanceof \pocketmine\tile\Chest) {
+                $tile->getInventory()->close($this);
+            }
         }
-        if ($this->exists && isset($this->$prop)) {
-            $this->$prop = $this->$prop += $val;
-            \Richen\NubixCore::data()->update('stats', [$prop => $this->$prop], [['k' => 'user_id', 'v' => $this->user_id]]);
-        }
-        print_r(\Richen\NubixCore::data()->lastError());
-        return $this->$prop;
+        $this->tiles = [];
     }
+    public bool $iswarp = false;
+    public function isWarp(): bool { return $this->iswarp; }
+    public function setWarp(bool $val) { $this->iswarp = $val; }
 }

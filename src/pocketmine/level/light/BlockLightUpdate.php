@@ -5,7 +5,7 @@ namespace pocketmine\level\light;
 class BlockLightUpdate extends LightUpdate{
 
 	public function getLight(int $x, int $y, int $z) : int{
-		print_r($this->subChunkHandler->currentSubChunk->getBlockLight($x & 0x0f, $y & 0x0f, $z & 0x0f));
+		//print_r($this->subChunkHandler->currentSubChunk->getBlockLight($x & 0x0f, $y & 0x0f, $z & 0x0f));
 		return 0;//$this->subChunkHandler->currentSubChunk->getBlockLight($x & 0x0f, $y & 0x0f, $z & 0x0f);
 	}
 	

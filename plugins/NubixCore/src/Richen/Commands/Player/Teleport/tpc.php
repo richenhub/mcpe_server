@@ -11,7 +11,7 @@ class tpc extends \Richen\NubixCmds {
         if (!$this->checkPermission($sender)) return;
         if (!$sender instanceof NBXPlayer) return $sender->sendMessage($this->getConsoleUsage());
         $tpmn = $sender->teleportManager();
-        if ($tpmn->hasRequests() && $sender instanceof NBXPlayer) {
+        if ($tpmn->hasRequests()) {
             $reqs = $tpmn->getRequests();
             foreach ($reqs as $name => $req) {
                 $pl = $this->core()->getServer()->getPlayerExact($name);

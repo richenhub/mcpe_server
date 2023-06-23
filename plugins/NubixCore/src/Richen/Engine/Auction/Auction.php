@@ -349,9 +349,8 @@ class Auction extends \Richen\Engine\Manager {
 			$playerName
 		);
 
-		$inventory = new \Richen\Engine\Additions\PersonalDoubleInventory($chest, $chest2, $playerName);
-
         if ($chest instanceof \Richen\Engine\Additions\VirtualChest && $chest2 instanceof \Richen\Engine\Additions\VirtualChest) {
+			$inventory = new \Richen\Engine\Additions\PersonalDoubleInventory($chest, $chest2, $playerName);
 		    $chest->setDoubleInventory($inventory);
 		    $chest2->setDoubleInventory($inventory);
 		    $chest->setShouldBeSpawned();

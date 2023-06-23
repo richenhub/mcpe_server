@@ -12,7 +12,7 @@ class chatgpt extends \Richen\NubixCmds {
         if (count($args) < 3) return $sender->sendMessage($this->getUsageMessage('[подробный вопрос к нейросети] §e- не меньше 3 слов.'));
         $message = implode(' ', $args);
         if (!Filter::isAllowed($message)) return $sender->sendMessage($this->lang()::ERR . ' §cНельзя использовать нецензурные выражения!');
-        if (($cd = $this->countdown($sender, 60)) > 0) return $sender->sendMessage($this->lang()::ERR . ' §cНе так часто! Подождите ещё ' . $cd . ' сек.');
+        if (!$this->countdown($sender, 60)) return;
         $this->serv()->broadcastMessage('§6[§eChat§fGPT§6] §fВопрос к нейросети от игрока §e' . $sender->getName() . '§f: §7' . $message);
         $result = $this->getChatGptResponse($message . '. В ответе используй максимум 100 символов и русский язык');
         $this->serv()->broadcastMessage('§6[§eChat§fGPT§6] §fОтвет: §7' . str_replace(PHP_EOL, '', $result));

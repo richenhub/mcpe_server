@@ -2,22 +2,73 @@
 
 namespace Richen\Listener;
 
+use pocketmine\entity\Entity;
 use Richen\Custom\NBXPlayer;
 use pocketmine\entity\Effect;
 use Richen\Engine\Utils;
-
 class MainListener extends \Richen\Engine\Manager implements \pocketmine\event\Listener {
+    use \Richen\Engine\Traits\Helper;
+
 	private $confirmations = [];
     public function onPlayerCreation(\pocketmine\event\player\PlayerCreationEvent $ev) {
 		$ev->setPlayerClass(NBXPlayer::class);
 	}
     
+    public function FurnaceSmelt(\pocketmine\event\inventory\FurnaceSmeltEvent $ev) {
+        $furnace = $ev->getFurnace();
+        $res = $ev->getResult();
+        if ($furnace->getLevel()->getTile($furnace)->getName() === '§1§dСупер-печка') {
+            $ev->setResult(\pocketmine\item\Item::get($res->getId(), $res->getDamage(), $res->getCount() + mt_rand(0,2)));
+        }
+    }
+
+    public function onFurnaceBurn(\pocketmine\event\inventory\FurnaceBurnEvent $ev) {
+        $furnace = $ev->getFurnace();
+        $fuel = $ev->getFuel()->getId();
+        $tileName = $furnace->getLevel()->getTile($furnace)->getName();
+        $mult = [325 => 1000, 173 => 800, 369 => 120, 263 => 80];
+        $div = ($tileName === '§0§dСупер-печка' ? 5 : ($tileName === '§1§dСупер-печка' ? 2 : 1));
+        switch ($tileName) {
+            case '§0§dСупер-печка': $div = 5; break;
+            case '§1§dСупер-печка': $div = 2; break;
+        }
+        $ev->setBurnTime(isset($mult[$fuel]) && isset($div) ? ($mult[$fuel] * 20 / $div) : 100);
+    }
+
 	public function handleInventoryTransaction(\pocketmine\event\inventory\InventoryTransactionEvent $ev) {
         $transaction = $ev->getQueue();
+
         if ($transaction instanceof \pocketmine\inventory\SimpleTransactionQueue && !\Richen\Engine\Auction\Auction::getInstance()->isViewingAuction($player = $transaction->getPlayer())) {
+            if (!$player instanceof NBXPlayer) return;
+            if ($player->teleportManager()->isTeleport()) return $ev->setCancelled();
+            foreach($transaction->getTransactions() as $_transaction) {
+                if ($player->isWarp()) {
+                    $ev->setCancelled();
+                }
+                $inventory = $_transaction->getInventory();
+                if (!$inventory) return;
+                $item = $inventory->getItem($_transaction->getSlot());
+                $name = $item->getCustomName();
+                $warps = $this->core()->getServerData()['warps'] ?? [];
+                if (count($warps)) {
+                    foreach ($warps as $warp => $data) {
+                        if ($name === $data['item']['name']) {
+                            $pos = $this->strToPosition($data['position']);
+                            $player->closeTile();
+                            $player->setWarp(false);
+                            if ($pos) {
+                                $player->teleportManager()->teleport($pos, 'Телепортация на варп: ' . mb_strtoupper($warp) . ' %s', '§eВы телепортированы на варп: §f' . mb_strtoupper($warp));
+                            } else {
+                                $player->sendMessage($this->lang()::ERR . ' §cТочка установлена не верно');
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
             return;
         }
-        $ev->setCancelled(true);
+        $ev->setCancelled();
         foreach($transaction->getTransactions() as $_transaction){
             $inventory = $_transaction->getInventory();
             if ($inventory instanceof \Richen\Engine\Additions\PersonalDoubleInventory) {
@@ -85,24 +136,25 @@ class MainListener extends \Richen\Engine\Manager implements \pocketmine\event\L
     public function onMove(\pocketmine\event\player\PlayerMoveEvent $ev) {
         $player = $ev->getPlayer();
         $this->core()->shop()->checkForCloseShop($player);
-        
     }
 
-    public function onInventory(\pocketmine\event\entity\EntityInventoryChangeEvent $ev) {
+    public function onInventoryChange(\pocketmine\event\entity\EntityInventoryChangeEvent $ev) {
         $player = $ev->getEntity();
+        return;
         if ($player instanceof NBXPlayer) {
+            $name = $ev->getNewItem()->getCustomName();
+            if ($name === '§0') return $ev->setCancelled();
             $warps = $this->core()->getServerData()['warps'] ?? [];
             if (count($warps)) {
-                $name = $ev->getNewItem()->getCustomName();
                 foreach ($warps as $warp => $data) {
                     if ($name === $data['item']['name']) {
                         $ev->setCancelled();
-                        $pos = Utils::strToPosition($data['position']);
+                        $pos = $this->strToPosition($data['position']);
                         if ($pos) {
-                            $player->teleport($pos);
-                            $player->sendMessage('Вы телепортированы на варп: ' . mb_strtoupper($warp));
+                            $player->closeTile();
+                            $player->teleportManager()->teleport($pos, 'Телепортация на варп: ' . mb_strtoupper($warp) . ' %s', '§eВы телепортированы на варп: §f' . mb_strtoupper($warp));
                         } else {
-                            $player->sendMessage('Точка установлена не верно');
+                            $player->sendMessage($this->lang()::ERR . ' §cТочка установлена не верно');
                         }
                         break;
                     }
@@ -111,14 +163,14 @@ class MainListener extends \Richen\Engine\Manager implements \pocketmine\event\L
         }
     }
 
-	public function handleInventoryPickupArrow(\pocketmine\event\inventory\InventoryPickupArrowEvent $event){
-		$arrow = $event->getArrow();
+	public function handleInventoryPickupArrow(\pocketmine\event\inventory\InventoryPickupArrowEvent $ev) {
+		$arrow = $ev->getArrow();
 		if (isset($arrow->namedtag->infinite)) {
-			$event->setCancelled(true);
+			$ev->setCancelled(true);
 		}
 	}
 
-    private function addSuccessfulBowHitSound(\pocketmine\Player $player) : void{
+    private function addSuccessfulBowHitSound(\pocketmine\Player $player): void {
 		$pk = new class extends \pocketmine\network\mcpe\protocol\PlaySoundPacket {
 			public function decode(){
 				$this->sound = $this->getString();
@@ -325,18 +377,70 @@ class MainListener extends \Richen\Engine\Manager implements \pocketmine\event\L
         $this->core()->help()->spawnArrows($player);
     }
 
-    private array $online = [];
-
     public function onBreak(\pocketmine\event\block\BlockBreakEvent $ev) {
         $player = $ev->getPlayer();
         if (!$player instanceof NBXPlayer) return $ev->setCancelled();
         if (!$player->isauth() || !$player->isreg()) return $ev->setCancelled();
+        $block = $ev->getBlock();
+        $level = $block->getLevel();
+        $x = $block->getX();
+        $y = $block->getY();
+        $z = $block->getZ();
+
+        $region = $this->core()->rgns();
+        $rg = $region->getRegionByPos($x, $y, $z, $level->getName());
+        if ($rg->isRegion() && !$rg->isMember($player->getName())) {
+            if (!$rg->getFlag('build')) {
+                $ev->setCancelled();
+                return;
+            }
+        }
+
+        $id = $block->getId();
+        $dmg = $block->getDamage();
+        $position = new \pocketmine\math\Vector3($x, $y, $z);
+
+        $tile = $level->getTile($position);
+        if ($player->getInventory()->getItemInHand()->isPickaxe() && $player->getGamemode() === 0) {
+            switch ($id) {
+                case 61:
+                case 62:
+                    $tileName = $tile->getName();
+                    if ($tileName === '§0§dСупер-печка' || $tileName === '§1§dСупер-печка') {
+                        $item = new \pocketmine\item\Item(61, 0, 1);
+                        if ($tileName === '§1§dСупер-печка') {
+                            $item->addEnchantment(\pocketmine\item\enchantment\Enchantment::getEnchantment(18)->setLevel(3));
+                        }
+                        $item->setCustomName($tileName);
+                        $item->addEnchantment(\pocketmine\item\enchantment\Enchantment::getEnchantment(15)->setLevel(3));
+                        $level->dropItem($position, $item);
+                        $ev->setDrops([]);
+                    }
+                    break;
+            }
+        }
+
     }
 
     public function onPlace(\pocketmine\event\block\BlockPlaceEvent $ev) {
         $player = $ev->getPlayer();
         if (!$player instanceof NBXPlayer) return $ev->setCancelled();
         if (!$player->isauth() || !$player->isreg()) return $ev->setCancelled();
+        
+        $block = $ev->getBlock();
+        $level = $block->getLevel();
+        $x = $block->getX();
+        $y = $block->getY();
+        $z = $block->getZ();
+
+        $region = $this->core()->rgns();
+        $rg = $region->getRegionByPos($x, $y, $z, $level->getName());
+        if ($rg->isRegion() && !$rg->isMember($player->getName())) {
+            if (!$rg->getFlag('build')) {
+                $ev->setCancelled();
+                return;
+            }
+        }
     }
 
     public function onDrop(\pocketmine\event\player\PlayerDropItemEvent $ev) {
@@ -345,6 +449,7 @@ class MainListener extends \Richen\Engine\Manager implements \pocketmine\event\L
         if (!$player->isauth() || !$player->isreg()) return $ev->setCancelled();
         $warps = $this->core()->getServerData()['warps'] ?? [];
         $name = $ev->getItem()->getCustomName();
+        if ($name === '§0') return $ev->setCancelled();
         foreach ($warps as $warp => $data) {
             if ($name === $data['item']['name']) {
                 $ev->setCancelled();
@@ -476,6 +581,7 @@ class MainListener extends \Richen\Engine\Manager implements \pocketmine\event\L
 	public function onQuery(\pocketmine\event\server\QueryRegenerateEvent $ev) {
         //$event->setPlayerCount();
 		$ev->setMaxPlayerCount(count($this->serv()->getOnlinePlayers()) + 1);
+        $ev->setListPlugins(false);
 	}
     
     public function onTouch(\pocketmine\event\player\PlayerInteractEvent $ev) {
@@ -509,21 +615,27 @@ class MainListener extends \Richen\Engine\Manager implements \pocketmine\event\L
     }
 
     public function onOpen(\pocketmine\event\inventory\InventoryOpenEvent $e) {
-        if ($e->getInventory() instanceof \pocketmine\inventory\EnchantInventory || $e->getInventory() instanceof \pocketmine\inventory\AnvilInventory) { $e->getPlayer()->onRename(); }
+        if ($e->getInventory() instanceof \pocketmine\inventory\EnchantInventory || $e->getInventory() instanceof \pocketmine\inventory\AnvilInventory) { $e->getPlayer()->onRename(true); }
+    }
+
+    public function onPlayerExperienceChangeEvent(\pocketmine\event\player\PlayerExperienceChangeEvent $ev) {
+        
     }
 
     public function onClose(\pocketmine\event\inventory\InventoryCloseEvent $ev) {
         $player = $ev->getPlayer();
+        if ($player instanceof NBXPlayer) $player->setWarp(false);
         if (\Richen\Engine\Auction\Auction::getInstance()->isViewingAuction($player = $ev->getPlayer())) {
             if ($ev->getInventory() instanceof \Richen\Engine\Additions\PersonalDoubleInventory) {
                 \Richen\Engine\Auction\Auction::getInstance()->addToDelayedClose($player);
             }
 		}
-        if ($ev->getInventory() instanceof \pocketmine\inventory\AnvilInventory || $ev->getInventory() instanceof \pocketmine\inventory\EnchantInventory) {
-            $this->serv()->getScheduler()->scheduleRepeatingTask(new class($player) extends \pocketmine\scheduler\Task { public $pl; public function __construct(\pocketmine\Player $pl) { $this->pl = $pl; } public function onRun($tick) { $this->pl->onRename(false); } }, 10);
+        if ($ev->getInventory() instanceof \pocketmine\inventory\AnvilInventory || $ev->getInventory() instanceof \pocketmine\inventory\EnchantInventory && $player instanceof Entity) {
+            $this->serv()->getScheduler()->scheduleDelayedTask(new class($player) extends \pocketmine\scheduler\Task { public $pl; public function __construct(\pocketmine\Player $pl) { $this->pl = $pl; } public function onRun($tick) { $this->pl->onRename(false); } }, 10);
         } 
     }
 
+    private array $online = [];
     public function onJoin(\pocketmine\event\player\PlayerJoinEvent $ev) {
         $ev->setJoinMessage(null);
         $player = $ev->getPlayer();
@@ -629,7 +741,7 @@ class MainListener extends \Richen\Engine\Manager implements \pocketmine\event\L
     public function checkRegister(NBXPlayer $player, $pass) {
         $lang = $this->core()->lang();
         if (!$player->isreg()) {
-            $hash = Utils::hash($pass, $player->getName());
+            $hash = $this->hash($pass, $player->getName());
             if (isset($this->register[$player->getName()])) {
                 if ($this->register[$player->getName()] === $hash) {
                     if (($id = $this->core()->user()->register($player->getName(), $hash, $player->getAddress())) > 0) {
@@ -651,7 +763,7 @@ class MainListener extends \Richen\Engine\Manager implements \pocketmine\event\L
                 $player->sendMessage($lang->prepare('auth-need-repeat-password', $lang::WRN));
             }
         } elseif (!$player->isauth()) {
-            $hash = Utils::hash($pass, $player->getName());
+            $hash = $this->hash($pass, $player->getName());
             if ($hash === $player->getPassword()) {
                 $player->sendMessage($lang->prepare('auth-success-login', $lang::SUC));
                 $player->login(true);

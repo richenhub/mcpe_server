@@ -14,12 +14,12 @@ class tpa extends \Richen\NubixCmds {
         if (!$sender instanceof NBXPlayer) return $sender->sendMessage($this->getConsoleUsage());
         if (!count($args)) return $sender->sendMessage($this->getUsageMessage('[игрок]'));
         $player = $this->core()->getServer()->getPlayerExact($args[0]);
-        $tpmn = $sender->teleportManager();
         if ($player instanceof NBXPlayer) {
+            $tpmn = $player->teleportManager();
+            $tpmn->setRequests($sender);
             $sender->sendMessage('§2[!] §7Вы отправили запрос на телепортацию игроку §e' . $player->getName());
             $player->sendMessage('§2[!] §7Вам поступил запрос на телепортацию от игрока §e' . $sender->getName());
             $player->sendMessage('§2[!] §7Чтобы принять запрос используйте: §a/tpc§7, для отмены: §6/tpd');
-            $tpmn->setRequests($player);
         } else {
             $sender->sendMessage($this->getOfflineMessage($args[0]));
         }
